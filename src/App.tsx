@@ -37,7 +37,7 @@ function App() {
     clearError
   } = useRoomSystem();
 
-  // AI logic (only when in game and for non-human players)
+  // AI logic (only when in single player mode and for non-human players)
   useAI(gameState, { playCard, drawCard, callUno });
 
   // Handle room events
@@ -85,10 +85,21 @@ function App() {
   };
 
   // Game handlers
-  const humanPlayer = gameState.players.find(p => p.isHuman);
-  const otherPlayers = gameState.players.filter(p => !p.isHuman);
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-  const isHumanTurn = currentPlayer?.isHuman;
+  
+  // In multiplayer mode, find the human player by currentPlayerId
+  // In single player mode, find the human player by isHuman flag
+  const humanPlayer = gameState.isMultiplayer 
+    ? gameState.players.find(p => p.id === currentPlayerId)
+    : gameState.players.find(p => p.isHuman);
+    
+  const otherPlayers = gameState.isMultiplayer
+    ? gameState.players.filter(p => p.id !== currentPlayerId)
+    : gameState.players.filter(p => !p.isHuman);
+    
+  const isHumanTurn = gameState.isMultiplayer 
+    ? currentPlayer?.id === currentPlayerId
+    : currentPlayer?.isHuman;
 
   const playableCards = humanPlayer ? humanPlayer.cards.filter(card => 
     canPlayCard(card, gameState.topCard, gameState.wildColor) &&
@@ -186,6 +197,11 @@ function App() {
               ⚠️ Mất kết nối server - Game có thể không hoạt động bình thường
             </div>
           )}
+          {gameState.isMultiplayer && (
+            <div className="mt-2 text-blue-300 text-sm">
+              🌐 Chế độ nhiều người chơi - Chờ lượt của bạn để đánh bài
+            </div>
+          )}
         </div>
 
         {/* Game Status */}
@@ -239,7 +255,11 @@ function App() {
             <li>• Call UNO when you have one card left</li>
             <li>• New cards: SwapHands, DrawMinusTwo, ShuffleMyHand, BlockAll</li>
             <li>• First player to run out of cards wins!</li>
-            <li>• <strong>Multiplayer:</strong> Play with {gameState.players.length} players in real-time!</li>
+            {gameState.isMultiplayer ? (
+              <li>• <strong>Multiplayer:</strong> Chờ đến lượt của bạn để đánh bài. Tất cả người chơi đều là người thật!</li>
+            ) : (
+              <li>• <strong>Single Player:</strong> Play against AI opponents</li>
+            )}
           </ul>
         </div>
       </div>

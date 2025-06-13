@@ -48,12 +48,12 @@ export function useGameState() {
   function initializeGameWithRoom(room: Room, currentPlayerId: string): GameState {
     const deck = shuffleDeck(createDeck());
     
-    // Create players from room data
+    // Create players from room data - ALL players are human in multiplayer
     const players: Player[] = room.players.map(roomPlayer => ({
       id: roomPlayer.id,
       name: roomPlayer.name,
       cards: [],
-      isHuman: roomPlayer.id === currentPlayerId,
+      isHuman: true, // ALL players are human in multiplayer mode
       hasCalledUno: false
     }));
 
@@ -84,7 +84,9 @@ export function useGameState() {
       drawPile: remainingDeck,
       discardPile: [topCard],
       gamePhase: 'playing',
-      isBlockAllActive: false
+      isBlockAllActive: false,
+      isMultiplayer: true, // Add flag to indicate multiplayer mode
+      currentPlayerId // Store current player ID for multiplayer
     };
   }
 
@@ -164,8 +166,8 @@ export function useGameState() {
       
       // Check for UNO (player has 1 card left)
       if (player.cards.length === 1 && !player.hasCalledUno) {
-        // Auto-call UNO for AI players
-        if (!player.isHuman) {
+        // In multiplayer, don't auto-call UNO for anyone
+        if (!newState.isMultiplayer && !player.isHuman) {
           player.hasCalledUno = true;
         }
       }
@@ -205,13 +207,15 @@ export function useGameState() {
           break;
           
         case 'swap-hands':
-          // For AI, swap with a random player (excluding self)
-          const otherPlayers = newState.players.filter(p => p.id !== player.id);
-          if (otherPlayers.length > 0) {
-            const targetPlayer = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
-            const tempCards = player.cards;
-            player.cards = targetPlayer.cards;
-            targetPlayer.cards = tempCards;
+          // In multiplayer, this would need special handling - for now skip the effect
+          if (!newState.isMultiplayer) {
+            const otherPlayers = newState.players.filter(p => p.id !== player.id);
+            if (otherPlayers.length > 0) {
+              const targetPlayer = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
+              const tempCards = player.cards;
+              player.cards = targetPlayer.cards;
+              targetPlayer.cards = tempCards;
+            }
           }
           break;
           

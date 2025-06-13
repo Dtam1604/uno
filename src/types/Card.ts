@@ -43,4 +43,6 @@ export interface GameState {
   gamePhase: 'waiting' | 'playing' | 'finished';
   winner?: Player;
   isBlockAllActive: boolean; // For BlockAll card effect
+  isMultiplayer?: boolean; // Flag to indicate multiplayer mode
+  currentPlayerId?: string; // Current player ID in multiplayer
 }

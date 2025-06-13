@@ -10,11 +10,14 @@ interface AIActions {
 
 export function useAI(gameState: GameState, actions: AIActions) {
   useEffect(() => {
+    // Don't run AI in multiplayer mode
+    if (gameState.isMultiplayer) return;
+    
     if (gameState.gamePhase !== 'playing') return;
 
     const currentPlayer = gameState.players[gameState.currentPlayerIndex];
     
-    // Only run AI logic for non-human players
+    // Only run AI logic for non-human players in single player mode
     if (!currentPlayer || currentPlayer.isHuman) return;
 
     // AI turn logic
@@ -91,5 +94,5 @@ export function useAI(gameState: GameState, actions: AIActions) {
     }, 1000 + Math.random() * 1000); // Random delay 1-2 seconds
 
     return () => clearTimeout(timer);
-  }, [gameState.currentPlayerIndex, gameState.gamePhase, gameState.topCard, gameState.wildColor, gameState.isBlockAllActive, gameState.players]);
+  }, [gameState.currentPlayerIndex, gameState.gamePhase, gameState.topCard, gameState.wildColor, gameState.isBlockAllActive, gameState.players, gameState.isMultiplayer]);
 }
