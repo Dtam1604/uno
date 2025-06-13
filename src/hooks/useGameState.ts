@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { GameState, Player, Card, CardColor } from '../types/Card';
 import { createDeck, shuffleDeck, canPlayCard } from '../utils/cardUtils';
+import { Room } from '../types/Room';
 
 export function useGameState() {
   const [gameState, setGameState] = useState<GameState>(() => initializeGame());
@@ -29,6 +30,50 @@ export function useGameState() {
     }
 
     const topCard = deck[topCardIndex];
+    const remainingDeck = deck.filter((_, index) => index !== topCardIndex && index >= cardIndex);
+
+    return {
+      players,
+      currentPlayerIndex: 0,
+      direction: 'clockwise',
+      topCard,
+      drawPile: remainingDeck,
+      discardPile: [topCard],
+      gamePhase: 'waiting',
+      isBlockAllActive: false
+    };
+  }
+
+  // New function to initialize game with room players
+  function initializeGameWithRoom(room: Room, currentPlayerId: string): GameState {
+    const deck = shuffleDeck(createDeck());
+    
+    // Create players from room data
+    const players: Player[] = room.players.map(roomPlayer => ({
+      id: roomPlayer.id,
+      name: roomPlayer.name,
+      cards: [],
+      isHuman: roomPlayer.id === currentPlayerId,
+      hasCalledUno: false
+    }));
+
+    // Deal 7 cards to each player
+    let cardIndex = 0;
+    for (let i = 0; i < 7; i++) {
+      players.forEach(player => {
+        if (cardIndex < deck.length) {
+          player.cards.push(deck[cardIndex++]);
+        }
+      });
+    }
+
+    // Find first non-action card for top card
+    let topCardIndex = cardIndex;
+    while (topCardIndex < deck.length && deck[topCardIndex].type !== 'number') {
+      topCardIndex++;
+    }
+
+    const topCard = deck[topCardIndex] || deck[cardIndex];
     const remainingDeck = deck.filter((_, index) => index !== topCardIndex && index >= cardIndex);
 
     return {
@@ -220,12 +265,17 @@ export function useGameState() {
     setGameState(initializeGame());
   }, []);
 
+  const initializeMultiplayerGame = useCallback((room: Room, currentPlayerId: string) => {
+    setGameState(initializeGameWithRoom(room, currentPlayerId));
+  }, []);
+
   return {
     gameState,
     drawCard,
     playCard,
     callUno,
-    resetGame
+    resetGame,
+    initializeMultiplayerGame
   };
 }
 

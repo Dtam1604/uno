@@ -14,7 +14,7 @@ type AppState = 'room-browser' | 'room-lobby' | 'game';
 
 function App() {
   const [appState, setAppState] = useState<AppState>('room-browser');
-  const { gameState, drawCard, playCard, callUno, resetGame } = useGameState();
+  const { gameState, drawCard, playCard, callUno, resetGame, initializeMultiplayerGame } = useGameState();
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
 
@@ -37,13 +37,17 @@ function App() {
     clearError
   } = useRoomSystem();
 
-  // AI logic (only when in game)
+  // AI logic (only when in game and for non-human players)
   useAI(gameState, { playCard, drawCard, callUno });
 
   // Handle room events
   React.useEffect(() => {
     if (currentRoom) {
       if (currentRoom.gameInProgress && appState !== 'game') {
+        // Initialize multiplayer game when game starts
+        if (currentPlayerId) {
+          initializeMultiplayerGame(currentRoom, currentPlayerId);
+        }
         setAppState('game');
       } else if (!currentRoom.gameInProgress && appState === 'game') {
         setAppState('room-lobby');
@@ -53,7 +57,7 @@ function App() {
     } else {
       setAppState('room-browser');
     }
-  }, [currentRoom, appState]);
+  }, [currentRoom, appState, currentPlayerId, initializeMultiplayerGame]);
 
   // Room system handlers
   const handleCreateRoom = async (data: any) => {
@@ -73,17 +77,18 @@ function App() {
 
   const handleStartGame = async () => {
     const success = await startGame();
-    if (success) {
-      // Initialize game with room players
-      // This would integrate with your existing game state
+    if (success && currentRoom && currentPlayerId) {
+      // Initialize the game with room players
+      initializeMultiplayerGame(currentRoom, currentPlayerId);
       setAppState('game');
     }
   };
 
-  // Game handlers (existing logic)
+  // Game handlers
   const humanPlayer = gameState.players.find(p => p.isHuman);
   const otherPlayers = gameState.players.filter(p => !p.isHuman);
-  const isHumanTurn = gameState.players[gameState.currentPlayerIndex]?.isHuman;
+  const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+  const isHumanTurn = currentPlayer?.isHuman;
 
   const playableCards = humanPlayer ? humanPlayer.cards.filter(card => 
     canPlayCard(card, gameState.topCard, gameState.wildColor) &&
@@ -97,27 +102,31 @@ function App() {
       setSelectedCard(card);
       setShowColorPicker(true);
     } else {
-      playCard('human', card);
-      setSelectedCard(null);
+      if (humanPlayer) {
+        playCard(humanPlayer.id, card);
+        setSelectedCard(null);
+      }
     }
   };
 
   const handleColorChoice = (color: CardColor) => {
-    if (selectedCard) {
-      playCard('human', selectedCard, color);
+    if (selectedCard && humanPlayer) {
+      playCard(humanPlayer.id, selectedCard, color);
       setSelectedCard(null);
     }
     setShowColorPicker(false);
   };
 
   const handleDrawCard = () => {
-    if (isHumanTurn) {
-      drawCard('human', 1);
+    if (isHumanTurn && humanPlayer) {
+      drawCard(humanPlayer.id, 1);
     }
   };
 
   const handleUnoCall = () => {
-    callUno('human');
+    if (humanPlayer) {
+      callUno(humanPlayer.id);
+    }
   };
 
   const handleGameRestart = () => {
@@ -155,7 +164,7 @@ function App() {
     );
   }
 
-  // Game view (existing game UI)
+  // Game view - now properly integrated with multiplayer
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
       {/* Background pattern */}
@@ -170,7 +179,7 @@ function App() {
             UNO Online
           </h1>
           <p className="text-white/70 text-lg">
-            {currentRoom ? `Phòng: ${currentRoom.name}` : 'Experience the classic card game with enhanced features'}
+            {currentRoom ? `Phòng: ${currentRoom.name} (${gameState.players.length} người chơi)` : 'Experience the classic card game with enhanced features'}
           </p>
           {!isConnected && (
             <div className="mt-2 text-red-300 text-sm">
@@ -194,7 +203,7 @@ function App() {
             <PlayerHand
               key={player.id}
               player={player}
-              isCurrentPlayer={gameState.players[gameState.currentPlayerIndex]?.id === player.id}
+              isCurrentPlayer={currentPlayer?.id === player.id}
               playableCards={[]}
             />
           ))}
@@ -230,6 +239,7 @@ function App() {
             <li>• Call UNO when you have one card left</li>
             <li>• New cards: SwapHands, DrawMinusTwo, ShuffleMyHand, BlockAll</li>
             <li>• First player to run out of cards wins!</li>
+            <li>• <strong>Multiplayer:</strong> Play with {gameState.players.length} players in real-time!</li>
           </ul>
         </div>
       </div>

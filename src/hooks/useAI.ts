@@ -14,6 +14,7 @@ export function useAI(gameState: GameState, actions: AIActions) {
 
     const currentPlayer = gameState.players[gameState.currentPlayerIndex];
     
+    // Only run AI logic for non-human players
     if (!currentPlayer || currentPlayer.isHuman) return;
 
     // AI turn logic
@@ -90,5 +91,5 @@ export function useAI(gameState: GameState, actions: AIActions) {
     }, 1000 + Math.random() * 1000); // Random delay 1-2 seconds
 
     return () => clearTimeout(timer);
-  }, [gameState.currentPlayerIndex, gameState.gamePhase, gameState.topCard, gameState.wildColor, gameState.isBlockAllActive]);
+  }, [gameState.currentPlayerIndex, gameState.gamePhase, gameState.topCard, gameState.wildColor, gameState.isBlockAllActive, gameState.players]);
 }

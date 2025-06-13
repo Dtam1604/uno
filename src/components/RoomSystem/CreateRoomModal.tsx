@@ -18,7 +18,7 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   const [formData, setFormData] = useState({
     name: '',
     hostName: '',
-    maxPlayers: 4,
+    maxPlayers: 2,
     password: '',
     hasPassword: false
   });
@@ -62,7 +62,7 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
       setFormData({
         name: '',
         hostName: '',
-        maxPlayers: 4,
+        maxPlayers: 2,
         password: '',
         hasPassword: false
       });
